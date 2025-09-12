@@ -33,14 +33,16 @@ class Window {
     public:
         Window(unsigned int w, unsigned int h, unsigned int nMines);
         ~Window(void);
-        bool move(unsigned int x, unsigned int y);
+        void move(unsigned int x, unsigned int y);
+        void flag(void);
+        bool reveal(void);
     private:
         unsigned int countMines(unsigned int x, unsigned int y);
         void renderCell(unsigned int x, unsigned int y);
         void setCursor(unsigned int x, unsigned int y);
 
         struct termios oldTermConfig;
-        std::vector<bool> cells;
+        std::vector<Cell> cells;
         unsigned int w, h, x, y, nMines;
         const char* bgColour = "\x1b[48;2;255;255;255m";
         const char* colours[9] = {
@@ -133,7 +135,7 @@ Window::countMines(unsigned int x, unsigned int y)
             if (tx < 0 || w <= tx) continue;
             if (ty < 0 || h <= ty) continue;
 
-            count += CELL_AT(tx, ty);
+            count += CELL_AT(tx, ty).isMine;
         }
     }
 
@@ -154,28 +156,41 @@ Window::renderCell(unsigned int x, unsigned int y)
 
     assert(0 <= nMines && nMines < 9);
     bool isFocused = this->x == x && this->y == y;
+    Cell cell = CELL_AT(x, y);
 
-    if (!CELL_AT(x, y)) {
-        char cellTxt = nMines == 0 ? ' ' : nMines + '0';
-        if (isFocused) printf("\x1b[1m");
-        printf("%s%s%c", bgColour, colours[nMines], cellTxt);
-        printf("\x1b[22m");
+    if (cell.isRevealed) {
+        if (!cell.isMine) {
+            char cellTxt = nMines == 0 ? ' ' : nMines + '0';
 
-    } else {
-       printf("\x1b[38;2;0;0;0m\x1b[48;2;255;0;0m!");
+            // bolden text
+            if (this->x == x && this->y == y) printf("\x1b[1;31m");
+
+            printf("%s%s%c", bgColour, colours[nMines], cellTxt);
+
+            // unbolden text
+            printf("\x1b[22m");
+
+        } else {
+            // set foreground
+            printf("\x1b[38;2;0;0;0m");
+
+            // set background
+            printf("\x1b[48;2;255;0;0m!");
+        }
+    } else if (cell.isFlagged) {
+        printf("\x1b[38;2;0;0;0m");
+        printf("\x1b[48;2;255;0;0mF");
     }
-
-    printf("\x1b[1D");
 }
 
-bool
+void
 Window::move(unsigned int dx, unsigned int dy)
 {
     unsigned int tx = x + dx;
     unsigned int ty = y + dy;
 
-    if (tx < 0 || w <= tx) return false;
-    if (ty < 0 || h <= ty) return false;
+    if (tx < 0 || w <= tx) return;
+    if (ty < 0 || h <= ty) return;
 
     tx = x;
     x += dx;
@@ -255,5 +270,34 @@ main(int argc, char** argv)
 
 
     Window window = Window(w, h, nMines);
-    sleep(5);
+    for (;;) {
+        char c;
+        int sz = read(STDIN_FILENO, &c, 1);
+        if (sz < 1) return 0;
+
+        switch(c) {
+            case 'q':
+                return 0;
+            case 'h':
+                window.move(-1, 0);
+                break;
+            case 'j':
+                window.move(0, 1);
+                break;
+            case 'k':
+                window.move(0, -1);
+                break;
+            case 'l':
+                window.move(1, 0);
+                break;
+            case 'f':
+                window.flag();
+                break;
+            case 'd':
+                window.reveal();
+                break;
+            case 'r':
+                window = Window(w, h, nMines);
+        }
+    }
 }

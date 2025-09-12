@@ -59,7 +59,7 @@ class Window {
 };
 
 
-Window::Window(unsigned int w, unsigned int h, unsigned int nMines)
+Window::Window(unsigned int _w, unsigned int _h, unsigned int _nMines)
 {
     // save old terminal config
     tcgetattr(STDOUT_FILENO, &oldTermConfig);
@@ -75,39 +75,69 @@ Window::Window(unsigned int w, unsigned int h, unsigned int nMines)
     // clear screen
     printf("\x1b[2J");
 
-    // move cursor to home position
-    printf("\x1b[H");
-
     // seed rng
     srand(time(NULL));
 
-    this->w = w;
-    this->h = h;
+    // get terminal dimensions
+    setCursor(99999, 99999);
+    printf("\x1b[6n\n");
+
+    char bff[16];
+    int sz = read(STDIN_FILENO, bff, 16);
+    int i = 0;
+
+    unsigned int wh, ww;
+    while (i < sz && bff[i++] != '\x1b');
+    wh = strtoui(&bff[++i]);
+
+    while (i < sz && bff[i++] != ';');
+    ww = strtoui(&bff[i]);
+    ww = ww / 2 + (ww & 1); // ceil
+
+    // clamp game board dimensions
+    w = std::min(_w, ww);
+    h = std::min(_h, wh);
+    nMines = std::min(_nMines, w * h);
     x = 0;
     y = 0;
 
-    cells = std::vector<bool>(w * h);
+    // move cursor to home position
+    printf("\x1b[H");
 
-    unsigned int t = 0;
-    for (auto cell : cells) {
-        if (t == nMines)
-            cell = 0;
-        else {
-            cell = rand() & 1;
-            t -= cell;
+    cells = std::vector<Cell>(w * h, { 0 });
+    int nCells = w * h;
+    assert(nMines <= nCells);
+
+    for (int n = 0; n < nMines; n++) {
+        int i = rand() % nMines;
+        if (cells[i].isMine) {
+            i += 1;
+            for (int j = 0; j < 2; ) {
+                for (; i < nCells; i++) {
+                    if (cells[i].isMine) continue;
+                    goto succ_;
+                }
+
+                i = 0;
+            }
         }
+
+succ_:
+        cells[i].isMine = true;
     }
 
     // set bg
-    printf("%s", bgColour);
+    printf("%s\x1b[38;2;0;0;0m", bgColour);
 
-    for (int i = 0; i < w - 1; i++) {
-        for (int j = 0; j < h; j++)
+    for (int j = 0; j < h; j++) {
+        for (int i = 0; i < w - 1; i++)
             printf("? ");
 
+        // print a ? and move cursor down 1 at begining of new line
         printf("?\x1b[1E");
     }
 
+    //CELL_AT(x, y).isMine = false;
     renderCell(0, 0);
     fflush(stdout);
 }

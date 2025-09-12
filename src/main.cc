@@ -11,6 +11,23 @@
 #define CELL_AT(x, y) (cells[y * w + x])
 #define MAX_NUM_LEN 6
 
+unsigned int
+strtoui(const char* s)
+{
+    unsigned int r = 0;
+    for (int i = 0; i < MAX_NUM_LEN; i++) {
+        if (s[i] < '0' || '9' < s[i]) return r;
+        r = r * 10 + (s[i] - '0');
+    }
+
+    return r;
+}
+
+
+struct Cell {
+    bool isMine, isRevealed, isFlagged;
+};
+
 class Window {
     public:
         Window(unsigned int w, unsigned int h, unsigned int nMines);
@@ -20,6 +37,7 @@ class Window {
         unsigned int countMines(unsigned int x, unsigned int y);
         void renderCell(unsigned int x, unsigned int y);
         void setCursor(unsigned int x, unsigned int y);
+
         struct termios oldTermConfig;
         std::vector<bool> cells;
         unsigned int w, h, x, y, nMines;
@@ -204,13 +222,13 @@ main(int argc, char** argv)
             while (a);
         }
         else if (!strcmp("--width", argv[i]))
-            w = strtoui(argv[++i], 5);
+            w = strtoui(argv[++i]);
 
         else if (!strcmp("--height", argv[i]))
-            h = strtoui(argv[++i], 5);
+            h = strtoui(argv[++i]);
 
         else if (!strcmp("--mines", argv[i]))
-            nMines = strtoui(argv[++i], 0);
+            nMines = strtoui(argv[++i]);
     }
 
 

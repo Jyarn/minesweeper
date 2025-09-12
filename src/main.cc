@@ -11,15 +11,16 @@
 
 class Window {
     public:
-        Window(int w, int h);
+        Window(unsigned int w, unsigned int h, unsigned int nMines);
         ~Window(void);
-        bool move(int x, int y);
+        bool move(unsigned int x, unsigned int y);
     private:
-        int countMines(int x, int y);
-        void renderCell(int x, int y);
+        unsigned int countMines(unsigned int x, unsigned int y);
+        void renderCell(unsigned int x, unsigned int y);
+        void setCursor(unsigned int x, unsigned int y);
         struct termios oldTermConfig;
         std::vector<bool> cells;
-        int w, h, x, y;
+        unsigned int w, h, x, y, nMines;
         const char* bgColour = "\x1b[48;2;255;255;255m";
         const char* colours[9] = {
             "",
@@ -35,7 +36,7 @@ class Window {
 };
 
 
-Window::Window(int w, int h)
+Window::Window(unsigned int w, unsigned int h, unsigned int nMines)
 {
     // save old terminal config
     tcgetattr(STDOUT_FILENO, &oldTermConfig);
@@ -46,15 +47,17 @@ Window::Window(int w, int h)
     tcsetattr(STDOUT_FILENO, TCSANOW, &newConfig);
 
     // enable alt buffer
-    std::cout << "\x1b[?1049h\n";
+    printf("\x1b[?1049h");
 
     // clear screen
-    std::cout << "\x1b[2J\n";
+    printf("\x1b[2J");
 
     // move cursor to home position
-    std::cout << "\x1b[H";
+    printf("\x1b[H");
 
+    // seed rng
     srand(time(NULL));
+
     this->w = w;
     this->h = h;
     x = 0;
@@ -71,7 +74,10 @@ Window::Window(int w, int h)
         }
     }
 
-    for (int i = 0; i < w; i++)
+    // set bg
+    printf("%s", bgColour);
+
+    for (int i = 0; i < w - 1; i++) {
         for (int j = 0; j < h; j++)
             renderCell(i, j);
 }
@@ -79,14 +85,15 @@ Window::Window(int w, int h)
 Window::~Window(void)
 {
     // disable alt buffer
-    std::cout << "\x1b[?1049l\n";
+    printf("\x1b[?1049l");
+    fflush(stdout);
 
     // exit raw mode
     tcsetattr(STDOUT_FILENO, TCSANOW, &oldTermConfig);
 }
 
-int
-Window::countMines(int x, int y)
+unsigned int
+Window::countMines(unsigned int x, unsigned int y)
 {
     int count = 0;
     for (int i = -1; i < 2; i++) {
@@ -106,36 +113,38 @@ Window::countMines(int x, int y)
 }
 
 void
-Window::renderCell(int x, int y)
+Window::setCursor(unsigned int x, unsigned int y)
 {
-    std::cout << "\x1b[";
-    std::cout << y + 1 << ";";
-    std::cout << x * 2 + 1 << "f";
+    printf("\x1b[%d;%df", y + 1, x*2 + 1);
+}
 
-    int nMines = countMines(x, y);
+void
+Window::renderCell(unsigned int x, unsigned int y)
+{
+    setCursor(x, y);
+    unsigned int nMines = countMines(x, y);
 
     assert(0 <= nMines && nMines < 9);
     bool isFocused = this->x == x && this->y == y;
 
     if (!CELL_AT(x, y)) {
         char cellTxt = nMines == 0 ? ' ' : nMines + '0';
-        if (isFocused) std::cout << "\x1b[4m;\x1b[1m";
-        std::cout << bgColour;
-        std::cout << colours[nMines] << cellTxt;
-        std::cout << "\x1b[22m\x1b[24m";
+        if (isFocused) printf("\x1b[1m");
+        printf("%s%s%c", bgColour, colours[nMines], cellTxt);
+        printf("\x1b[22m");
 
     } else {
-        std::cout << "\x1b[38;2;0;0;0m\x1b[48;2;255;0;0m!";
+       printf("\x1b[38;2;0;0;0m\x1b[48;2;255;0;0m!");
     }
 
-    std::cout << std::flush;
+    printf("\x1b[1D");
 }
 
 bool
-Window::move(int dx, int dy)
+Window::move(unsigned int dx, unsigned int dy)
 {
-    int tx = x + dx;
-    int ty = y + dy;
+    unsigned int tx = x + dx;
+    unsigned int ty = y + dy;
 
     if (tx < 0 || w <= tx) return false;
     if (ty < 0 || h <= ty) return false;

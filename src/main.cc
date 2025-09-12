@@ -157,12 +157,46 @@ Window::move(unsigned int dx, unsigned int dy)
 
     renderCell(x, y);
     renderCell(tx, ty);
+    fflush(stdout);
     return CELL_AT(x, y);
+}
+
+unsigned int
+strtoui(const char* s, unsigned int lCap)
+{
+    unsigned int r = 0;
+    for (int i = 0; i < MAX_NUM_LEN; i++) {
+        if (s[i] < '0' || '9' < s[i]) return std::max(r, lCap);
+        r = r * 10 + (s[i] - '0');
+    }
+
+    return std::max(r, lCap);
 }
 
 int
 main(int argc, char** argv)
 {
-    Window window = Window(25, 25);
-    std::this_thread::sleep_for (std::chrono::seconds(10));
+    unsigned int w, h, nMines;
+    w = h = 25;
+    nMines = w * h / 8;
+
+    for (int i = 1; i < argc; i++) {
+        // provide developer with enough time to hook gdb up to monitor the
+        // process. needed since we use the terminal instance as the display
+        // and can't use it to debug
+        //
+        // in a seperate terminal, run `gdb -p {PID}}`
+        // once in gdb, run `set var a = 0`
+        // note: don't forget to build with debug symbols enabled
+        if (!strcmp("--debug", argv[i])) {
+            printf("Waiting for dev to connect\n");
+            printf("(pid)=%d\n", getpid());
+            char a = 1;
+            while (a);
+        }
+    }
+
+
+    Window window = Window(w, h, nMines);
+    sleep(5);
 }

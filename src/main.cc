@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
+#include <limits.h>
 
 #include <vector>
 #include <algorithm>
@@ -182,30 +183,51 @@ Window::move(unsigned int dx, unsigned int dy)
     ty = y;
     y += dy;
 
-    renderCell(x, y);
     renderCell(tx, ty);
+    renderCell(x, y);
+
+    // since cursor is only moved right by one in the last call to renderCell
+    // iff cell is boldened
+    if (CELL_AT(x, y).isRevealed)
+        printf("\x1b[1D");
+
     fflush(stdout);
-    return CELL_AT(x, y);
 }
 
-unsigned int
-strtoui(const char* s, unsigned int lCap)
+void
+Window::flag(void)
 {
-    unsigned int r = 0;
-    for (int i = 0; i < MAX_NUM_LEN; i++) {
-        if (s[i] < '0' || '9' < s[i]) return std::max(r, lCap);
-        r = r * 10 + (s[i] - '0');
-    }
+    Cell* cell = &CELL_AT(x, y);
+    if (cell->isRevealed) return;
 
-    return std::max(r, lCap);
+    cell->isFlagged = true;
+    renderCell(x, y);
+
+    // move left by one unit
+    printf("\x1b[1D");
+    fflush(stdout);
 }
+
+bool
+Window::reveal(void)
+{
+    Cell* cell = &CELL_AT(x, y);
+    if (cell->isFlagged) return false;
+
+    cell->isRevealed = true;
+    renderCell(x, y);
+    printf("\x1b[1D");
+    fflush(stdout);
+    return cell->isMine;
+}
+
 
 int
 main(int argc, char** argv)
 {
     unsigned int w, h, nMines;
-    w = h = 25;
-    nMines = w * h / 8;
+    w = h = 3;
+    nMines = 2;
 
     for (int i = 1; i < argc; i++) {
         // provide developer with enough time to hook gdb up to monitor the

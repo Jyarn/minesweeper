@@ -66,13 +66,14 @@ Window::Window(unsigned int w, unsigned int h, unsigned int nMines)
     y = 0;
 
     cells = std::vector<bool>(w * h);
-    for (auto cell : cells)
-        cell = rand() & 1;
 
-    std::cout << bgColour;
-    for (int i = 1; i < w * 2; i++) {
-        for (int j = 1; j < h + 1; j++) {
-            std::cout << "\x1b[" << j << ";" << i << "f" << ' ';
+    unsigned int t = 0;
+    for (auto cell : cells) {
+        if (t == nMines)
+            cell = 0;
+        else {
+            cell = rand() & 1;
+            t -= cell;
         }
     }
 
@@ -207,6 +208,9 @@ main(int argc, char** argv)
 
         else if (!strcmp("--height", argv[i]))
             h = strtoui(argv[++i], 5);
+
+        else if (!strcmp("--mines", argv[i]))
+            nMines = strtoui(argv[++i], 0);
     }
 
 

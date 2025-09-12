@@ -1,13 +1,15 @@
 #include <termios.h>
 #include <unistd.h>
 #include <assert.h>
+#include <string.h>
+#include <stdio.h>
+#include <time.h>
 
-#include <iostream>
 #include <vector>
-#include <thread>
-#include <chrono>
+#include <algorithm>
 
 #define CELL_AT(x, y) (cells[y * w + x])
+#define MAX_NUM_LEN 6
 
 class Window {
     public:
@@ -23,7 +25,7 @@ class Window {
         unsigned int w, h, x, y, nMines;
         const char* bgColour = "\x1b[48;2;255;255;255m";
         const char* colours[9] = {
-            "",
+            "\x1b[38;2;0;0;0m",
             "\x1b[38;2;0;0;255m",
             "\x1b[38;2;128;0;255m",
             "\x1b[38;2;255;0;0m",
@@ -79,7 +81,13 @@ Window::Window(unsigned int w, unsigned int h, unsigned int nMines)
 
     for (int i = 0; i < w - 1; i++) {
         for (int j = 0; j < h; j++)
-            renderCell(i, j);
+            printf("? ");
+
+        printf("?\x1b[1E");
+    }
+
+    renderCell(0, 0);
+    fflush(stdout);
 }
 
 Window::~Window(void)
@@ -194,6 +202,11 @@ main(int argc, char** argv)
             char a = 1;
             while (a);
         }
+        else if (!strcmp("--width", argv[i]))
+            w = strtoui(argv[++i], 5);
+
+        else if (!strcmp("--height", argv[i]))
+            h = strtoui(argv[++i], 5);
     }
 
 

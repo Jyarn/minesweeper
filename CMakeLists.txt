@@ -5,4 +5,4 @@ project(minesweeper)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-add_executable(minesweeper src/main.cc)
+add_executable(minesweeper src/main.cc src/game.cc src/common.cc src/window.cc)

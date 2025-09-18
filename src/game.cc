@@ -23,6 +23,20 @@ Game::printBar(void)
     fflush(stdout);
 }
 
+void
+Game::revealAll(void)
+{
+    for (int tx = 0; tx < w; tx++) {
+        for (int ty = 0; ty < h; ty++) {
+            Cell* cell = &CELL_AT(tx, ty);
+            cell->isRevealed = !cell->isFlagged;
+            renderCell(tx, ty);
+        }
+    }
+
+    window->setCursor(x, y);
+}
+
 Game::Game(Preset preset, Window* window) : Game(preset.w, preset.h, preset.nMines, window) {}
 
 Game::Game(uint_t _w, uint_t _h, uint_t _nMines, Window* _window)
@@ -133,15 +147,19 @@ Game::renderCell(uint_t x, uint_t y)
 
     if (cl != NULL) {
         if (cl->isRevealed && !cl->isMine) lc = bgColour;
-        else if (cell.isFlagged && cl->isFlagged) lc = mineColour;
-        else if (cl->isRevealed && cell.isRevealed && cl->isMine && cell.isMine)
+        else if (cell.isFlagged && !(cl->isRevealed && cl->isMine)) lc = mineColour;
+        else if (cell.isRevealed && cell.isMine && (cl->isRevealed && cl->isMine))
+            lc = mineColour;
+        else if (!(cell.isRevealed || cell.isFlagged) && (cl->isFlagged || (cl->isMine && cl->isRevealed)))
             lc = mineColour;
     }
 
     if (cr != NULL) {
         if (cr->isRevealed && !cr->isMine) rc = bgColour;
-        else if (cell.isFlagged && cr->isFlagged) rc = mineColour;
-        else if (cr->isRevealed && cell.isRevealed && cr->isMine && cell.isMine)
+        else if (cell.isFlagged && !(cr->isRevealed && cr->isMine)) rc = mineColour;
+        else if (cell.isRevealed && cell.isMine && (cr->isRevealed && cr->isMine))
+            rc = mineColour;
+        else if (!(cell.isRevealed || cell.isFlagged) && (cr->isFlagged || (cr->isMine && cr->isRevealed)))
             rc = mineColour;
     }
 

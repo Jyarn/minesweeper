@@ -22,7 +22,8 @@ struct Cell {
 typedef enum {
     Win,
     Lose,
-    OnGoing
+    OnGoing,
+    NotStarted,
 } GameState;
 
 class Game {
@@ -33,6 +34,8 @@ class Game {
         void flag(void);
         GameState reveal(void);
         void printBar(void);
+        GameState getCurrentState(void);
+        void revealAll(void);
     private:
         uint_t countMines(unsigned int x, unsigned int y);
         void renderCell(unsigned int x, unsigned int y);
@@ -58,5 +61,5 @@ class Game {
 
         Window* window;
         time_t timeStarted;
-        bool started;
+        GameState currentState;
 };

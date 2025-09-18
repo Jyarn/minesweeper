@@ -43,7 +43,7 @@ Game::Game(uint_t _w, uint_t _h, uint_t _nMines, Window* _window)
 
     x = w / 2;
     y = h / 2;
-    started = false;
+    currentState = NotStarted;
 
     window->setCursor(0, 0);
     cells = std::vector<Cell>(w * h, { 0 });
@@ -67,9 +67,9 @@ Game::Game(uint_t _w, uint_t _h, uint_t _nMines, Window* _window)
 void
 Game::start(void)
 {
-    if (started) return;
+    if (currentState != NotStarted) return;
 
-    started = true;
+    currentState = OnGoing;
     int nCells = w * h;
     assert(nMines < nCells);
 
@@ -204,6 +204,7 @@ Game::flag(void)
     Cell* cell = &CELL_AT(x, y);
     if (cell->isRevealed) return;
     else if (nPlaced >= nMines && !cell->isFlagged) return;
+    else if (currentState == NotStarted) return;
 
     cell->isFlagged = !cell->isFlagged;
     assert(cell->isFlagged == 0 || cell->isFlagged == 1);
@@ -220,7 +221,7 @@ GameState
 Game::reveal(void)
 {
     Cell* cell = &CELL_AT(x, y);
-    if (!started) start();
+    if (currentState == NotStarted) start();
     else if (cell->isFlagged) return OnGoing;
 
     if (cell->isRevealed) {

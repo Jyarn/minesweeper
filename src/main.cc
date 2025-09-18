@@ -12,16 +12,22 @@
 #include "game.hh"
 #include "poll.h"
 
+Preset presets[] = {
+    { .w = 9, .h = 9, .nMines = 10, .name = "beginner" },
+    { .w = 16, .h = 16, .nMines = 30, .name = "intermediate" },
+    { .w = 30, .h = 16, .nMines = 99, .name = "expert" }
+};
+
 int
 main(int argc, char** argv)
 {
     // seed rng
     srand(time(NULL));
 
+    Preset preset = presets[2];
+
+    bool customGame = false;
     uint_t w, h, nMines;
-    time_t seed = time(NULL);
-    w = h = 3;
-    nMines = 2;
 
     for (int i = 1; i < argc; i++) {
         // provide developer with enough time to hook gdb up to monitor the
@@ -36,34 +42,51 @@ main(int argc, char** argv)
             printf("(pid)=%d\n", getpid());
             char a = 1;
             while (a);
-        }
-        else if (!strcmp("--width", argv[i]))
+
+        } else if (!strcmp("--custom", argv[i]) && argc-i > 3) {
+            customGame = true;
             w = strtoui(argv[++i]);
-
-        else if (!strcmp("--height", argv[i]))
             h = strtoui(argv[++i]);
-
-        else if (!strcmp("--mines", argv[i]))
             nMines = strtoui(argv[++i]);
 
-        else if (!strcmp("--seed", argv[i]))
-            seed = strtoui(argv[++i]);
+        } else if (!strcmp("--preset", argv[i]) && argc-i > 1) {
+            i += 1;
+
+            for (int j = 0; j < sizeof(presets) / sizeof(Preset); j++) {
+                if (!strcmp(argv[i], presets[j].name)) {
+                    customGame = false;
+                    preset = presets[j];
+                    goto succ_;
+                }
+            }
+
+            fprintf(stderr, "Unknow preset \"%s\"\n", argv[i]);
+            return -1;
+
+succ_:      continue;
+        }
     }
 
 
     Window window = Window();
-    Game game = Game(w, h, nMines, &window, seed);
+    Game* game;
+
     struct pollfd pfd = {
         .fd = STDIN_FILENO,
         .events = POLLIN
     };
+
+restart_:
+    if (customGame) game = new Game(w, h, nMines, &window);
+    else game = new Game(preset, &window);
+
 
     for (;;) {
         char c;
 
         // async io with poll
         pfd.revents = 0;
-        game.printBar();
+        game->printBar();
         int ready = poll(&pfd, 1, 1000);
 
         if (ready == 1 && pfd.revents & POLLIN) {
@@ -74,26 +97,25 @@ main(int argc, char** argv)
                 case 'q':
                     return 0;
                 case 'h':
-                    game.move(-1, 0);
+                    game->move(-1, 0);
                     break;
                 case 'j':
-                    game.move(0, 1);
+                    game->move(0, 1);
                     break;
                 case 'k':
-                    game.move(0, -1);
+                    game->move(0, -1);
                     break;
                 case 'l':
-                    game.move(1, 0);
+                    game->move(1, 0);
                     break;
                 case 'f':
-                    game.flag();
+                    game->flag();
                     break;
                 case 'd':
-                    game.reveal();
+                    game->reveal();
                     break;
                 case 'r':
-                    game = Game(w, h, nMines, &window, seed);
-                    break;
+                    goto restart_;
             }
 
         } else if (ready == -1) {

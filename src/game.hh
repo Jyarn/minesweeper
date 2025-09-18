@@ -10,6 +10,11 @@
 
 #define CELL_AT(x, y) (cells[y * w + x])
 
+struct Preset {
+    uint_t w, h, nMines;
+    const char* name;
+};
+
 struct Cell {
     bool isMine, isRevealed, isFlagged;
 };
@@ -22,7 +27,8 @@ typedef enum {
 
 class Game {
     public:
-        Game(unsigned int _w, unsigned int _h, unsigned int _nMines, Window* _window, int seed);
+        Game(unsigned int _w, unsigned int _h, unsigned int _nMines, Window* _window);
+        Game(Preset preset, Window* window);
         void move(unsigned int x, unsigned int y);
         void flag(void);
         GameState reveal(void);

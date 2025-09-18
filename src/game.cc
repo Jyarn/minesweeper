@@ -23,7 +23,9 @@ Game::printBar(void)
     fflush(stdout);
 }
 
-Game::Game(uint_t _w, uint_t _h, uint_t _nMines, Window* _window, int seed)
+Game::Game(Preset preset, Window* window) : Game(preset.w, preset.h, preset.nMines, window) {}
+
+Game::Game(uint_t _w, uint_t _h, uint_t _nMines, Window* _window)
 {
     nRevealed = nPlaced = 0;
     timeStarted = time(NULL);

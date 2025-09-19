@@ -11,6 +11,13 @@
 #include "window.hh"
 #include "common.hh"
 
+void
+Game::getGameInfo(time_t* timeElapsed, float* percentRevealed)
+{
+    *timeElapsed = time(NULL) - timeStarted;
+    *percentRevealed = (float)nRevealed / (float)(w * h - nMines);
+    *percentRevealed *= 100;
+}
 
 void
 Game::printBar(void)
@@ -29,7 +36,13 @@ Game::revealAll(void)
     for (int tx = 0; tx < w; tx++) {
         for (int ty = 0; ty < h; ty++) {
             Cell* cell = &CELL_AT(tx, ty);
-            cell->isRevealed = !cell->isFlagged;
+            if (currentState == Lose)
+                cell->isRevealed = !cell->isFlagged;
+            else if (currentState == Win)
+                cell->isFlagged = cell->isMine;
+            else
+                continue;
+
             renderCell(tx, ty);
         }
     }
@@ -240,7 +253,11 @@ Game::reveal(void)
 {
     Cell* cell = &CELL_AT(x, y);
     if (currentState == NotStarted) start();
-    else if (cell->isFlagged) return OnGoing;
+    else if (currentState != OnGoing) return currentState;
+    else if (cell->isFlagged) {
+        currentState = OnGoing;
+        return OnGoing;
+    }
 
     if (cell->isRevealed) {
         int nr, nm, nf, nc;
@@ -271,7 +288,11 @@ Game::reveal(void)
                     else if (0 > ny || ny >= h) continue;
                     Cell* tc = &CELL_AT(nx, ny);
 
-                    if (tc->isMine && ! tc->isFlagged) return Lose;
+                    if (tc->isMine && ! tc->isFlagged) {
+                        currentState = Lose;
+                        return currentState;
+                    }
+
                     reveal(nx, ny);
                 }
     }
@@ -283,9 +304,12 @@ Game::reveal(void)
     if (cell->isMine) {
         cell->isRevealed = true;
         renderCell(x, y);
+        currentState = Lose;
+        return Lose;
     }
-    if (nRevealed == nMines) return Win;
-    return OnGoing;
+
+    currentState = nRevealed == w * h - nMines ? Win : OnGoing;
+    return currentState;
 }
 
 void

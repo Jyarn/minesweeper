@@ -34,8 +34,8 @@ class Game {
         void flag(void);
         GameState reveal(void);
         void printBar(void);
-        GameState getCurrentState(void);
         void revealAll(void);
+        void getGameInfo(time_t* timeElapsed, float* percentRevealed);
     private:
         uint_t countMines(unsigned int x, unsigned int y);
         void renderCell(unsigned int x, unsigned int y);

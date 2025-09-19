@@ -76,50 +76,87 @@ succ_:      continue;
         .events = POLLIN
     };
 
+
+    GameState curState;
+    int gameNo = 0;
+    char buff;
+
+    while (++gameNo) {
 restart_:
-    if (customGame) game = new Game(w, h, nMines, &window);
-    else game = new Game(preset, &window);
+        if (customGame) game = new Game(w, h, nMines, &window);
+        else game = new Game(preset, &window);
 
+        curState = NotStarted;
 
-    for (;;) {
-        char c;
+        while (curState != Win && curState != Lose) {
+            pfd.revents = 0;
+            game->printBar();
 
-        // async io with poll
-        pfd.revents = 0;
-        game->printBar();
-        int ready = poll(&pfd, 1, 1000);
+            // poll on stdin for 1000ms
+            int ready = poll(&pfd, 1, 1000);
 
-        if (ready == 1 && pfd.revents & POLLIN) {
-            int sz = read(STDIN_FILENO, &c, 1);
-            if (sz < 1) return 0;
+            if (ready == 1 && pfd.revents & POLLIN) {
+                int sz = read(STDIN_FILENO, &buff, 1);
 
-            switch(c) {
-                case 'q':
-                    return 0;
-                case 'h':
-                    game->move(-1, 0);
-                    break;
-                case 'j':
-                    game->move(0, 1);
-                    break;
-                case 'k':
-                    game->move(0, -1);
-                    break;
-                case 'l':
-                    game->move(1, 0);
-                    break;
-                case 'f':
-                    game->flag();
-                    break;
-                case 'd':
-                    game->reveal();
-                    break;
-                case 'r':
-                    goto restart_;
-            }
+                // check if stdin is closed
+                if (sz < 1) return -1;
 
-        } else if (ready == -1) {
-            return -1;
+                switch (buff) {
+                    case 'q':
+                        return 0;
+                    case 'h':
+                        game->move(-1, 0);
+                        break;
+                    case 'j':
+                        game->move(0, 1);
+                        break;
+                    case 'k':
+                        game->move(0, -1);
+                        break;
+                    case 'l':
+                        game->move(1, 0);
+                        break;
+                    case 'f':
+                        game->flag();
+                        break;
+                    case 'd':
+                        curState = game->reveal();
+                        break;
+                    case 'r':
+                        goto restart_;
+                }
+
+            } else if (ready == -1)
+                return -1;
         }
+
+        time_t timeElapsed;
+        float percentRevealed;
+        game->getGameInfo(&timeElapsed, &percentRevealed);
+
+        game->revealAll();
+        window.setCursor(0, -2);
+
+        printf("\x1b[1;31m\x1b[?25l");
+
+        assert(curState == Win || curState == Lose);
+        switch (curState) {
+            case Win:
+                printf("Game %d: Win, %lds (%3.2f)\n", gameNo, timeElapsed, percentRevealed);
+                break;
+            case Lose:
+                printf("Game %d: Loss, %lds (%3.2f)\n", gameNo, timeElapsed, percentRevealed);
+                break;
+        }
+
+        fflush(stdout);
+
+        do
+            read(STDIN_FILENO, &buff, 1);
+        while (buff != 'r' && buff != 'q');
+
+        printf("\x1b[?25h");
+        fflush(stdout);
+        if (buff == 'q') return 0;
     }
 }
